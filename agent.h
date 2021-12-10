@@ -18,6 +18,9 @@
 #include "action.h"
 #include <fstream>
 
+#define RNG 0
+#define MCTS 1
+
 class agent {
 public:
 	agent(const std::string& args = "") {
@@ -82,14 +85,34 @@ public:
 			throw std::invalid_argument("invalid role: " + role());
 		for (size_t i = 0; i < space.size(); i++)
 			space[i] = action::place(i, who);
+		if (meta.find("mode") != meta.end()) {
+			std::cout << meta["mode"].value << std::endl;
+			if (meta["mode"].value == "mcts") {
+				mode = MCTS;
+			}
+		}
+		else {
+			mode = RNG;
+		}
 	}
 
 	virtual action take_action(const board& state) {
 		std::shuffle(space.begin(), space.end(), engine);
-		for (const action::place& move : space) {
-			board after = state;
-			if (move.apply(after) == board::legal)
-				return move;
+		switch (mode) {
+			case MCTS:
+				// selection
+				// expansion
+				// simulation
+				// updating
+
+				// choose an action
+				break;
+			default:
+				for (const action::place& move : space) {
+					board after = state;
+					if (move.apply(after) == board::legal)
+						return move;
+				}
 		}
 		return action();
 	}
@@ -97,4 +120,5 @@ public:
 private:
 	std::vector<action::place> space;
 	board::piece_type who;
+	int mode;
 };
