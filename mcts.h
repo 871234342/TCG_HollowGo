@@ -133,6 +133,10 @@ public:
         return selecting;
     }
 
+    node* expand(node* expanding) {
+        return expanding->expand();
+    }
+
 private:
     node root;
     int iteration;
