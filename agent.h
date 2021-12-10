@@ -17,6 +17,7 @@
 #include "board.h"
 #include "action.h"
 #include <fstream>
+#include "mcts.h"
 
 #define RNG 0
 #define MCTS 1

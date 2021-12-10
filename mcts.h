@@ -124,9 +124,7 @@ private:
 
 class mcts{
 public:
-    mcts(board& root_board, board::piece_type player_type, int iter) : root(root_board, player_type){
-        iteration = iter;
-    }
+    mcts(board& root_board, board::piece_type player_type, int iter) : root(root_board, player_type){}
 
     node* select() {
         node* selecting = &root;
@@ -145,7 +143,12 @@ public:
         return to_simulate->simulate(root.get_who());
     }
 
+    void update(node* leaf, bool win) {
+        while((leaf = leaf->update(win)) != NULL) {
+            continue;
+        }
+    }
+
 private:
     node root;
-    int iteration;
 };
