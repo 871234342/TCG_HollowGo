@@ -22,6 +22,10 @@ public:
         explored_child = 0;
     }
 
+    board::piece_type get_who() {
+        return who;
+    }
+
     /**
      * return the child node with highest UCB, or itself if the node is leaf
      */
@@ -133,8 +137,12 @@ public:
         return selecting;
     }
 
-    node* expand(node* expanding) {
-        return expanding->expand();
+    node* expand(node* to_expand) {
+        return to_expand->expand();
+    }
+
+    bool simulate(node* to_simulate) {
+        return to_simulate->simulate(root.get_who());
     }
 
 private:
