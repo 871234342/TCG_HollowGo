@@ -26,18 +26,30 @@ public:
         return who;
     }
 
+    int get_win_rate() {
+        return (double)win / (double)played;
+    }
+
+    action::place get_move() {
+        return parent_move;
+    }
+
+    double UBC(int parent_played) {
+        return (double)win / (double)played + 0.1 * sqrt(log10(parent_played) / (double)played);
+    }
+
     /**
      * return the child node with highest UCB, or itself if the node is leaf
      */
     node* select() {
         if (num_of_child != explored_child || num_of_child == 0)     return this;
-        double best_UCB = 0;
+        double best_value = 0;
         double c = 0.1;  // a constant
         node* best;
         for (node* child : children) {
-            double UCB = (double)child->win / (double)child->played + c * sqrt(log10(this->played) / (double)child->played);
-            if (UCB >= best_UCB) {
-                best_UCB = UCB;
+            double value = child->UBC(played);
+            if (value >= best_value) {
+                best_value = value;
                 best = child;
             }
         }
@@ -113,6 +125,19 @@ public:
         return parent;
     }
 
+    action::place best_action() {
+        double best_win_rate = 0;
+        action::place best_move;
+        for (node* child : children) {
+            double win_rate = child->get_win_rate();
+            if (win_rate >= best_win_rate) {
+                best_win_rate = win_rate;
+                best_move = child->get_move();
+            } 
+        }
+        return best_move;
+    }
+
 private:
     board current;
     int num_of_child, explored_child, win, played;
@@ -150,7 +175,18 @@ public:
         }
     }
 
+    node* best_win_rate() {
+        for (node* child : root.c)
+    }
 
+    void tree_search(int cycles) {
+        for (int i = 0; i < cycles; i++) {
+            node* working = select();
+            working = expand(working);
+            bool result = simulate(working);
+            update(working, result);            
+        }
+    }
 
 private:
     node root;
