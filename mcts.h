@@ -124,9 +124,13 @@ public:
         iteration = iter;
     }
 
-    void select() {
+    node* select() {
         node* selecting = &root;
-        if (selecting->select())
+        node* next;
+        while ((next = selecting->select()) != selecting) {
+            selecting = next;
+        }
+        return selecting;
     }
 
 private:
