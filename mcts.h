@@ -150,7 +150,7 @@ private:
 
 class mcts{
 public:
-    mcts(board& root_board, board::piece_type player_type, int iter) : root(root_board, player_type){}
+    mcts(const board& root_board, board::piece_type player_type) : root(root_board, player_type){}
 
     node* select() {
         node* selecting = &root;
@@ -175,17 +175,14 @@ public:
         }
     }
 
-    action::place get_result() {
-        return root.best_action();
-    }
-
-    void tree_search(int cycles) {
+    action::place tree_search(int cycles) {
         for (int i = 0; i < cycles; i++) {
             node* working = select();
             working = expand(working);
             bool result = simulate(working);
             update(working, result);            
         }
+        return root.best_action();
     }
 
 private:

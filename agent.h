@@ -101,13 +101,11 @@ public:
 		std::shuffle(space.begin(), space.end(), engine);
 		switch (mode) {
 			case MCTS:
-				// selection
-				// expansion
-				// simulation
-				// updating
-
-				// choose an action
+				{
+				mcts gameTree(state, who);
+				return gameTree.tree_search(100);
 				break;
+				}
 			default:
 				for (const action::place& move : space) {
 					board after = state;
