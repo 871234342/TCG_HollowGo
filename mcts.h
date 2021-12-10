@@ -175,8 +175,8 @@ public:
         }
     }
 
-    node* best_win_rate() {
-        for (node* child : root.c)
+    action::place get_result() {
+        return root.best_action();
     }
 
     void tree_search(int cycles) {
