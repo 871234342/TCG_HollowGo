@@ -52,7 +52,6 @@ public:
         if (num_of_child == 0) {
             // generate all children
             std::vector<action::place> space(board::size_x * board::size_y);
-            is_leaf = false;
             for (size_t i = 0; i < space.size(); i++)
                 space[i] = action::place(i, who);
             std::default_random_engine rng;
@@ -62,6 +61,8 @@ public:
                 if (move.apply(after) == board::legal) {
                     node* child = new node(after, child_type);
                     child->parent = this;
+                    child->parent_move = move;
+                    children.push_back(child);
                 }
             }
             num_of_child = children.size();
@@ -117,8 +118,8 @@ private:
     int num_of_child, explored_child, win, played;
     board::piece_type who;  //type to play next
     board::piece_type child_type;
-    bool is_leaf = true;
     node* parent = NULL;
+    action::place parent_move;
     std::vector<node*> children;
 };
 
@@ -148,6 +149,8 @@ public:
             continue;
         }
     }
+
+
 
 private:
     node root;
