@@ -22,8 +22,10 @@ public:
         explored_child = 0;
     }
 
+    /**
+     * return the child node with highest UCB, or itself if the node is leaf
+     */
     node* select() {
-        // return the chid node with highest UCB, or itself if the node is leaf
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_UCB = 0;
         double c = 0.1;  // a constant
@@ -38,10 +40,11 @@ public:
         return best;
     }
 
+    /**
+     * return the node to simulate
+     * if is leaf (num_of_child == 0), expand all children before return 
+     */
     node* expand() {
-        // expand a node, and return the node to simulate
-        // if is leaf, create all children and do simulation on one of it
-        // else do simulation on any child
         if (num_of_child == 0) {
             // generate all children
             std::vector<action::place> space(board::size_x * board::size_y);
@@ -66,17 +69,20 @@ public:
         }
     }
 
-    bool simulate() {
-        // return true if win, false if lose
+    /**
+     * return true if win for root peice type
+     * both player play randomly
+     */ 
+    bool simulate(board::piece_type root_type) {
         std::vector<int> space(board::size_x * board::size_y);
         std::default_random_engine rng;
         board simulate = current;
-        bool opponent_turn = false;
+        bool my_turn = root_type == who;
         bool checkmate = true;
         for (size_t i = 0; i < sizeof(space); i++) {
             space[i] = i;
         }
-        for (;;opponent_turn = !opponent_turn) {
+        for (;;my_turn = !my_turn) {
             std::shuffle(space.begin(), space.end(), rng);
             for (int pos : space) {
                 if (simulate.place(pos % 9, pos / 9) == board::nogo_move_result::legal) {
@@ -85,7 +91,7 @@ public:
                 }
             }
             if (checkmate) {
-                return opponent_turn;
+                return my_turn;
             }
             else {
                 checkmate = true;
@@ -93,10 +99,19 @@ public:
         }
     }
 
+    /**
+     * return the parent node to update
+     */
+    node* update(bool victory) {
+        played++;
+        if (victory)    win++;
+        return parent;
+    }
+
 private:
     board current;
     int num_of_child, explored_child, win, played;
-    board::piece_type who;
+    board::piece_type who;  //type to play next
     board::piece_type child_type;
     bool is_leaf = true;
     node* parent = NULL;
