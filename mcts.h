@@ -44,7 +44,6 @@ public:
     node* select() {
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
-        double c = 0.1;  // a constant
         node* best;
         for (node* child : children) {
             double value = child->UBC(played);

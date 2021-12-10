@@ -86,9 +86,9 @@ public:
 			throw std::invalid_argument("invalid role: " + role());
 		for (size_t i = 0; i < space.size(); i++)
 			space[i] = action::place(i, who);
-		if (meta.find("mode") != meta.end()) {
-			std::cout << meta["mode"].value << std::endl;
-			if (meta["mode"].value == "mcts") {
+		if (meta.find("search") != meta.end()) {
+			std::cout << meta["search"].value << std::endl;
+			if (meta["search"].value == "MCTS") {
 				mode = MCTS;
 			}
 		}
