@@ -21,6 +21,7 @@
 
 #define RNG 0
 #define MCTS 1
+#define MORON 2
 
 class agent {
 public:
@@ -87,25 +88,35 @@ public:
 		for (size_t i = 0; i < space.size(); i++)
 			space[i] = action::place(i, who);
 		if (meta.find("search") != meta.end()) {
-			std::cout << meta["search"].value << std::endl;
 			if (meta["search"].value == "MCTS") {
 				mode = MCTS;
+				mcts_sim_count = atoi(meta["count"].value.c_str());
+			}
+			else if(meta["search"].value == "MORON") {
+				mode = MORON;
 			}
 		}
 		else {
 			mode = RNG;
 		}
+		if (who == board::black) 	std::cout<<"Black is mode "<<mode<<'\n';
+		else						std::cout<<"White is mode "<<mode<<'\n';
 	}
 
 	virtual action take_action(const board& state) {
 		std::shuffle(space.begin(), space.end(), engine);
+		char t;
 		switch (mode) {
 			case MCTS:
 				{
+				//count++;
+				//std::cout << count << std::endl << state;
 				mcts gameTree(state, who);
-				return gameTree.tree_search(100);
+				return gameTree.tree_search(mcts_sim_count, true);
 				break;
 				}
+			case MORON:
+				break;
 			default:
 				for (const action::place& move : space) {
 					board after = state;
@@ -120,4 +131,5 @@ private:
 	std::vector<action::place> space;
 	board::piece_type who;
 	int mode;
+	int mcts_sim_count = 0;
 };

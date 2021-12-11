@@ -10,6 +10,8 @@
 #include <fstream>
 #include <cmath>
 
+std::default_random_engine engine;
+
 class node{
 public:
     node(board new_board, board::piece_type player_type){
@@ -18,16 +20,20 @@ public:
         if (who == board::black)    child_type = board::white;
         else                        child_type = board::black;
         current = new_board;
-        num_of_child = 0;
-        explored_child = 0;
+    }
+
+    ~node() {
+        for (node* child : children) {
+            delete child;
+        }
     }
 
     board::piece_type get_who() {
         return who;
     }
 
-    int get_win_rate() {
-        return (double)win / (double)played;
+    int get_visit_count() {
+        return played;
     }
 
     action::place get_move() {
@@ -35,16 +41,27 @@ public:
     }
 
     double UBC(int parent_played) {
-        return (double)win / (double)played + 0.1 * sqrt(log10(parent_played) / (double)played);
+        double log_parent_played = std::log(parent_played);
+        double explore = std::sqrt(log_parent_played / played);
+        double exploit = (double)win / (double)played;
+        // std::cout<<exploit<<"+"<<explore<<"  \n";
+        // if (exploit > 1) {
+        //     char t;
+        //     std::cout<<"HMM?: "<<win<<"/"<<played<<'\n';
+        //     std::cin>>t;
+        // }
+        return explore + exploit;
     }
 
     /**
-     * return the child node with highest UCB, or itself if the node is leaf
+     * return the child node with highest UCB, or itself if the node has unexplored child
      */
     node* select() {
+        //std::cout<<"Selection started!      ";
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
-        node* best;
+        node* best=NULL;
+        //std::cout<<"Iterating...\n";
         for (node* child : children) {
             double value = child->UBC(played);
             if (value >= best_value) {
@@ -52,21 +69,29 @@ public:
                 best = child;
             }
         }
+        //std::cout<<"  done with best_score="<<best_value<<'\n';
         return best;
     }
 
     /**
-     * return the node to simulate
-     * if is leaf (num_of_child == 0), expand all children before return 
+     * return the node expanded to simulate
+     * if is leaf (num_of_child == 0), create all children first before return
+     * if the node is terminal, return itself
      */
     node* expand() {
-        if (num_of_child == 0) {
+        if (num_of_child != 0 && explored_child == num_of_child) {
+            std::cout<<"WTF?";
+            exit(1);
+        }
+        if (terminated) {
+            return this;
+        }
+        else if (num_of_child == 0) {
             // generate all children
             std::vector<action::place> space(board::size_x * board::size_y);
             for (size_t i = 0; i < space.size(); i++)
                 space[i] = action::place(i, who);
-            std::default_random_engine rng;
-            std::shuffle(space.begin(), space.end(), rng);
+            std::shuffle(space.begin(), space.end(), engine);
             for (const action::place& move : space) {
                 board after = current;
                 if (move.apply(after) == board::legal) {
@@ -78,6 +103,10 @@ public:
             }
             num_of_child = children.size();
 
+            if (num_of_child == 0) {
+                terminated = true;
+                return this;
+            }
             return children[explored_child++];
         }
         else {
@@ -89,28 +118,29 @@ public:
      * return true if win for root peice type
      * both player play randomly
      */ 
-    bool simulate(board::piece_type root_type) {
+    bool simulate(board::piece_type root_player) {
         std::vector<int> space(board::size_x * board::size_y);
-        std::default_random_engine rng;
         board simulate = current;
-        bool my_turn = root_type == who;
+        board::piece_type current_player = who;
         bool checkmate = true;
         for (size_t i = 0; i < sizeof(space); i++) {
             space[i] = i;
         }
-        for (;;my_turn = !my_turn) {
-            std::shuffle(space.begin(), space.end(), rng);
+        for (;;) {
+            std::shuffle(space.begin(), space.end(), engine);
             for (int pos : space) {
-                if (simulate.place(pos % 9, pos / 9) == board::nogo_move_result::legal) {
+                action::place move = action::place(pos, current_player);
+                if (move.apply(simulate) == board::legal) {
                     checkmate = false;
                     break;
                 }
             }
             if (checkmate) {
-                return my_turn;
+                return current_player != root_player;
             }
             else {
                 checkmate = true;
+                current_player = (current_player == board::black ? board::white : board::black);
             }
         }
     }
@@ -125,12 +155,12 @@ public:
     }
 
     action::place best_action() {
-        double best_win_rate = 0;
+        int most_visit_count = 0;
         action::place best_move;
         for (node* child : children) {
-            double win_rate = child->get_win_rate();
-            if (win_rate >= best_win_rate) {
-                best_win_rate = win_rate;
+            int visit_count = child->get_visit_count();
+            if (visit_count >= most_visit_count) {
+                most_visit_count = visit_count;
                 best_move = child->get_move();
             } 
         }
@@ -139,12 +169,13 @@ public:
 
 private:
     board current;
-    int num_of_child, explored_child, win, played;
+    int num_of_child = 0, explored_child = 0, win = 0, played = 0;
     board::piece_type who;  //type to play next
     board::piece_type child_type;
     node* parent = NULL;
     action::place parent_move;
     std::vector<node*> children;
+    bool terminated = false;
 };
 
 class mcts{
@@ -174,12 +205,29 @@ public:
         }
     }
 
-    action::place tree_search(int cycles) {
+    action::place tree_search(int cycles, bool debug = false) {
+        char t;
         for (int i = 0; i < cycles; i++) {
+            if (debug) {
+                //std::cout << "selecting..\n";
+                //std::cin >> t;
+            }
             node* working = select();
+            if (debug) {
+                //std::cout << "expanding..\n";
+                //std::cin >> t;
+            }
             working = expand(working);
+            if (debug) {
+                //std::cout << "simulating..\n";
+                //std::cin >> t;
+            }
             bool result = simulate(working);
-            update(working, result);            
+            if (debug) {
+                //std::cout << "updating..\n";
+                //std::cin >> t;
+            }
+            update(working, result);
         }
         return root.best_action();
     }

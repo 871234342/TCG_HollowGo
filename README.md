@@ -56,6 +56,11 @@ To launch the GTP shell with custom player arguments:
 ./nogo --shell --black="search=MCTS simulation=1000" --white="search=alpha-beta depth=3"
 ```
 
+To launch MCTS:
+```bash
+./nogo --black="search=MCTS count=1000"
+```
+
 ## Author
 
 [Computer Games and Intelligence (CGI) Lab](https://cgilab.nctu.edu.tw/), NYCU, Taiwan
