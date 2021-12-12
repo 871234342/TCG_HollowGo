@@ -90,7 +90,16 @@ public:
 		if (meta.find("search") != meta.end()) {
 			if (meta["search"].value == "MCTS") {
 				mode = MCTS;
-				mcts_sim_count = atoi(meta["count"].value.c_str());
+				if (meta.find("time") != meta.end()) {
+					mcts_sim_count = 0;
+					mcts_think_time = atoi(meta["time"].value.c_str());
+				}
+				else if (meta.find("count") != meta.end()) {
+					mcts_sim_count = atoi(meta["count"].value.c_str());
+				}
+				else {
+					mcts_sim_count = 1000;
+				}
 			}
 			else if(meta["search"].value == "MORON") {
 				mode = MORON;
@@ -111,8 +120,8 @@ public:
 				{
 				//count++;
 				//std::cout << count << std::endl << state;
-				mcts gameTree(state, who);
-				return gameTree.tree_search(mcts_sim_count, true);
+				mcts gameTree(state, who, mcts_sim_count, mcts_think_time);
+				return gameTree.tree_search();
 				break;
 				}
 			case MORON:
@@ -132,4 +141,5 @@ private:
 	board::piece_type who;
 	int mode;
 	int mcts_sim_count = 0;
+	int mcts_think_time;
 };

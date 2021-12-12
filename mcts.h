@@ -9,8 +9,16 @@
 #include "action.h"
 #include <fstream>
 #include <cmath>
+#include <unistd.h>
+#include <signal.h>
 
 std::default_random_engine engine;
+
+bool time_up = false;
+
+void mcts_timeout(int sig) {
+    time_up = true;
+}
 
 class node{
 public:
@@ -50,7 +58,7 @@ public:
         //     std::cout<<"HMM?: "<<win<<"/"<<played<<'\n';
         //     std::cin>>t;
         // }
-        return explore + exploit;
+        return explore + 0.7 * exploit;
     }
 
     /**
@@ -180,7 +188,8 @@ private:
 
 class mcts{
 public:
-    mcts(const board& root_board, board::piece_type player_type) : root(root_board, player_type){}
+    mcts(const board& root_board, board::piece_type player_type, int c, int t) : root(root_board, player_type), cycles(c),
+        think_time(t) {}
 
     node* select() {
         node* selecting = &root;
@@ -205,33 +214,32 @@ public:
         }
     }
 
-    action::place tree_search(int cycles, bool debug = false) {
-        char t;
-        for (int i = 0; i < cycles; i++) {
-            if (debug) {
-                //std::cout << "selecting..\n";
-                //std::cin >> t;
+    action::place tree_search(bool debug = false) {
+        if (cycles != 0) {
+            for (int i = 0; i < cycles; i++) {
+                node* working = select();
+                working = expand(working);
+                bool result = simulate(working);
+                update(working, result);
+            }            
+        }
+        else {
+            time_up = false;
+            signal(SIGALRM, &mcts_timeout);
+            ualarm(think_time * 1000, 0);
+            while(1) {
+                node* working = select();
+                working = expand(working);
+                bool result = simulate(working);
+                update(working, result);
+                if (time_up)   break;          
             }
-            node* working = select();
-            if (debug) {
-                //std::cout << "expanding..\n";
-                //std::cin >> t;
-            }
-            working = expand(working);
-            if (debug) {
-                //std::cout << "simulating..\n";
-                //std::cin >> t;
-            }
-            bool result = simulate(working);
-            if (debug) {
-                //std::cout << "updating..\n";
-                //std::cin >> t;
-            }
-            update(working, result);
         }
         return root.best_action();
     }
 
 private:
     node root;
+    int cycles;     // number of simulations
+    int think_time; // thinking_time in milisecond;
 };
