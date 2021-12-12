@@ -100,6 +100,7 @@ public:
 				else {
 					mcts_sim_count = 1000;
 				}
+				if (meta.find("tuned") != meta.end())	tuned = true;
 			}
 			else if(meta["search"].value == "MORON") {
 				mode = MORON;
@@ -108,8 +109,6 @@ public:
 		else {
 			mode = RNG;
 		}
-		if (who == board::black) 	std::cout<<"Black is mode "<<mode<<'\n';
-		else						std::cout<<"White is mode "<<mode<<'\n';
 	}
 
 	virtual action take_action(const board& state) {
@@ -120,7 +119,7 @@ public:
 				{
 				//count++;
 				//std::cout << count << std::endl << state;
-				mcts gameTree(state, who, mcts_sim_count, mcts_think_time);
+				mcts gameTree(state, who, mcts_sim_count, mcts_think_time, tuned);
 				return gameTree.tree_search();
 				break;
 				}
@@ -142,4 +141,5 @@ private:
 	int mode;
 	int mcts_sim_count = 0;
 	int mcts_think_time;
+	bool tuned = false;
 };

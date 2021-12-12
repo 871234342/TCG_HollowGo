@@ -48,12 +48,9 @@ public:
         return parent_move;
     }
 
-    double UCB(int parent_played = 0) {
-        return Q + 0.2 * std::sqrt(std::log(parent->N) / N);
-    }
-
-    double UCB_tuned() {
-        // count V(n)
+    double UCB(bool tuned = false) {
+        if (tuned)  return Q + std::sqrt(std::log(parent->N) / N * std::min(0.25, mean - mean * mean));
+        else        return Q + std::sqrt(std::log(parent->N) / N) * 0.1;
     }
 
     /**
@@ -64,27 +61,13 @@ public:
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
         node* best=NULL;
-        //std::cout<<"Iterating...\n";
-        if (tuned){
-            for (node* child : children) {
-                double value = child->UCB();
-                if (value >= best_value) {
-                    best_value = value;
-                    best = child;
-                }
-            }              
-        }
-        else {
-            for (node* child : children) {
-                double value = child->UCB();
-                if (value >= best_value) {
-                    best_value = value;
-                    best = child;
-                }
-            }            
-        }
-
-        //std::cout<<"  done with best_score="<<best_value<<'\n';
+        for (node* child : children) {
+            double value = child->UCB(tuned);
+            if (value >= best_value) {
+                best_value = value;
+                best = child;
+            }
+        }            
         return best;
     }
 
@@ -164,6 +147,7 @@ public:
      * return the parent node to update
      */
     node* update(bool victory) {
+        mean = (mean * N + victory) / (N + 1);
         N++;
         Q += (victory - Q) / N;
         return parent;
@@ -192,18 +176,18 @@ private:
     std::vector<node*> children;
     bool terminated = false;
     int N = 0;
-    double Q = 0;
+    double Q = 0, mean = 0;
 };
 
 class mcts{
 public:
-    mcts(const board& root_board, board::piece_type player_type, int c, int t) : root(root_board, player_type), cycles(c),
-        think_time(t) {}
+    mcts(const board& root_board, board::piece_type player_type, int c, int t, bool tu = true) : 
+        root(root_board, player_type), cycles(c), think_time(t), tuned(tu){}
 
-    node* select() {
+    node* select(bool tuned = true) {
         node* selecting = &root;
         node* next;
-        while ((next = selecting->select()) != selecting) {
+        while ((next = selecting->select(tuned)) != selecting) {
             selecting = next;
         }
         return selecting;
@@ -251,4 +235,5 @@ private:
     node root;
     int cycles;     // number of simulations
     int think_time; // thinking_time in milisecond;
+    bool tuned = true;
 };
