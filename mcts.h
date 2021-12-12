@@ -20,6 +20,16 @@ void mcts_timeout(int sig) {
     time_up = true;
 }
 
+int space[] = {0, 1, 2, 3, 4, 5, 6, 7, 8,
+9, 10, 11, 12, 13, 14, 15, 16, 17,
+18, 19, 20, 21, 22, 23, 24, 25, 26,
+27, 28, 29, 30, 31, 32, 33, 34, 35,
+36, 37, 38, 39, 40, 41, 42, 43, 44,
+45, 46, 47, 48, 49, 50, 51, 52, 53,
+54, 55, 56, 57, 58, 59, 60, 61, 62,
+63, 64, 65, 66, 67, 68, 69, 70, 71,
+72, 73, 74, 75, 76, 77, 78, 79, 80};
+
 class node{
 public:
     node(board new_board, board::piece_type player_type){
@@ -56,13 +66,16 @@ public:
     /**
      * return the child node with highest UCB, or itself if the node has unexplored child
      */
-    node* select(bool tuned = false) {
+    node* select(board::piece_type root_type, bool tuned = false) {
         //std::cout<<"Selection started!      ";
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
+        double c = 0.7;
         node* best=NULL;
         for (node* child : children) {
-            double value = child->UCB(tuned);
+            double value;
+            if (root_type == who)   value = child->Q + std::sqrt(std::log(N) / child->N) * c;
+            else                    value = (1 - child->Q) + std::sqrt(std::log(N) / child->N) * c;
             if (value >= best_value) {
                 best_value = value;
                 best = child;
@@ -86,12 +99,11 @@ public:
         }
         else if (num_of_child == 0) {
             // generate all children
-            std::vector<action::place> space(board::size_x * board::size_y);
-            for (size_t i = 0; i < space.size(); i++)
+            for (size_t i = 0; i < sizeof(space) / sizeof(space[0]); i++)
                 space[i] = action::place(i, who);
-            std::shuffle(space.begin(), space.end(), engine);
-            for (const action::place& move : space) {
+            for (int pos : space) {
                 board after = current;
+                action::place move = action::place(pos, who);
                 if (move.apply(after) == board::legal) {
                     node* child = new node(after, child_type);
                     child->parent = this;
@@ -117,15 +129,11 @@ public:
      * both player play randomly
      */ 
     bool simulate(board::piece_type root_player) {
-        std::vector<int> space(board::size_x * board::size_y);
         board simulate = current;
         board::piece_type current_player = who;
         bool checkmate = true;
-        for (size_t i = 0; i < sizeof(space); i++) {
-            space[i] = i;
-        }
         for (;;) {
-            std::shuffle(space.begin(), space.end(), engine);
+            std::shuffle(&space[0], &space[81], engine);
             for (int pos : space) {
                 action::place move = action::place(pos, current_player);
                 if (move.apply(simulate) == board::legal) {
@@ -187,7 +195,7 @@ public:
     node* select(bool tuned = true) {
         node* selecting = &root;
         node* next;
-        while ((next = selecting->select(tuned)) != selecting) {
+        while ((next = selecting->select(root.get_who(), tuned)) != selecting) {
             selecting = next;
         }
         return selecting;

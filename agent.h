@@ -113,12 +113,9 @@ public:
 
 	virtual action take_action(const board& state) {
 		std::shuffle(space.begin(), space.end(), engine);
-		char t;
 		switch (mode) {
 			case MCTS:
 				{
-				//count++;
-				//std::cout << count << std::endl << state;
 				mcts gameTree(state, who, mcts_sim_count, mcts_think_time, tuned);
 				return gameTree.tree_search();
 				break;
