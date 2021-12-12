@@ -99,8 +99,6 @@ public:
         }
         else if (num_of_child == 0) {
             // generate all children
-            for (size_t i = 0; i < sizeof(space) / sizeof(space[0]); i++)
-                space[i] = action::place(i, who);
             for (int pos : space) {
                 board after = current;
                 action::place move = action::place(pos, who);
