@@ -46,18 +46,6 @@ public:
         }
     }
 
-    board::piece_type get_who() {
-        return who;
-    }
-
-    int get_visit_count() {
-        return N;
-    }
-
-    int get_move() {
-        return parent_move;
-    }
-
     double UCB(bool tuned = false) {
         if (tuned)  return Q + std::sqrt(std::log(parent->N) / N * std::min(0.25, mean - mean * mean));
         else        return Q + std::sqrt(std::log(parent->N) / N) * 0.1;
@@ -66,7 +54,7 @@ public:
     /**
      * return the child node with highest UCB, or itself if the node has unexplored child
      */
-    node* select(board::piece_type root_type, bool tuned = false) {
+    node* select(board::piece_type root_type, double RAVE, bool tuned = false) {
         //std::cout<<"Selection started!      ";
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
@@ -74,13 +62,15 @@ public:
         node* best=NULL;
         for (node* child : children) {
             double value;
-            if (root_type == who)   value = child->Q + std::sqrt(std::log(N) / child->N) * c;
-            else                    value = (1 - child->Q) + std::sqrt(std::log(N) / child->N) * c;
+            if (root_type == who)   
+                value = (1 - RAVE) * child->Q + RAVE * child->Q_RAVE + std::sqrt(std::log(N) / child->N) * c;
+            else   
+                value = (1 - RAVE) * (1 - child->Q) + RAVE * (1 - child->Q_RAVE) + std::sqrt(std::log(N) / child->N) * c;
             if (value >= best_value) {
                 best_value = value;
                 best = child;
             }
-        }            
+        }
         return best;
     }
 
@@ -159,20 +149,25 @@ public:
         return parent;
     }
 
+    void RAVE_update(bool victory) {
+        N_RAVE++;
+        Q_RAVE += (victory - Q_RAVE) / N_RAVE;
+    }
+
     action::place best_action() {
         int most_visit_count = 0;
         int best_move = -1;
         for (node* child : children) {
-            int visit_count = child->get_visit_count();
+            int visit_count = child->N;
             if (visit_count >= most_visit_count) {
                 most_visit_count = visit_count;
-                best_move = child->get_move();
+                best_move = child->parent_move;
             } 
         }
         return action::place(best_move, who);
     }
 
-private:
+public:
     board current;
     int num_of_child = 0, explored_child = 0;
     board::piece_type who;  //type to play next
@@ -180,30 +175,49 @@ private:
     node* parent = NULL;
     std::vector<node*> children;
     bool terminated = false;
-    int N = 0, parent_move = -1;
-    double Q = 0, mean = 0;
+    int N = 0, N_RAVE = 0, parent_move = -1;
+    double Q = 0, Q_RAVE = 0, mean = 0;
+};
+
+struct placement{
+    /**
+     * "who" places at "pos"
+     */
+    int pos;
+    board::piece_type who;
+
+    placement(int p, board::piece_type w) : pos(p), who(w) {}
 };
 
 class mcts{
 public:
-    mcts(const board& root_board, board::piece_type player_type, int c, int t, bool tu = true) : 
-        root(root_board, player_type), cycles(c), think_time(t), tuned(tu){}
+    mcts(const board& root_board, board::piece_type player_type, int c, int t, bool tu = true, double r = 0) : 
+        root(root_board, player_type), cycles(c), think_time(t), tuned(tu), RAVE(r) {
+            path.clear();
+        }
 
-    node* select(bool tuned = true) {
+    node* select(bool tuned = false) {
         node* selecting = &root;
         node* next;
-        while ((next = selecting->select(root.get_who(), tuned)) != selecting) {
+        while ((next = selecting->select(root.who, RAVE, tuned)) != selecting) {
             selecting = next;
+            path.emplace_back(placement(selecting->parent_move, selecting->parent->who));
         }
         return selecting;
     }
 
     node* expand(node* to_expand) {
-        return to_expand->expand();
+        // std::cout<<"expanding...\n";
+        node* to_sim = to_expand->expand();
+        // std::cout<<"emplacing...\n";
+        if (to_sim != to_expand) {
+            path.emplace_back(placement(to_sim->parent_move, to_sim->parent->who));
+        }
+        return to_sim;
     }
 
     bool simulate(node* to_simulate) {
-        return to_simulate->simulate(root.get_who());
+        return to_simulate->simulate(root.who);
     }
 
     void update(node* leaf, bool win) {
@@ -212,25 +226,62 @@ public:
         }
     }
 
+    void traverse(bool win, node* start) {
+        for (node* child : start->children) {
+            traverse(win, child);
+        }
+        // RAVE update
+        for (placement move : path) {
+            if (start->parent_move == move.pos && start->parent->who == move.who) {
+                start->RAVE_update(win);
+            }
+        }
+    }
+
     action::place tree_search(bool debug = false) {
         if (cycles != 0) {
-            for (int i = 0; i < cycles; i++) {
-                node* working = select();
-                working = expand(working);
-                bool result = simulate(working);
-                update(working, result);
-            }            
+            if (RAVE != 0) {
+                for (int i = 0; i < cycles; i++) {
+                    path.clear();
+                    node* working = select();
+                    working = expand(working);
+                    bool result = simulate(working);
+                    update(working, result);
+                    traverse(result, &root);
+                }
+            }
+            else {
+                for (int i = 0; i < cycles; i++) {
+                    node* working = select();
+                    working = expand(working);
+                    bool result = simulate(working);
+                    update(working, result);
+                }
+            }
         }
         else {
             time_up = false;
             signal(SIGALRM, &mcts_timeout);
             ualarm(think_time * 1000, 0);
-            while(1) {
-                node* working = select();
-                working = expand(working);
-                bool result = simulate(working);
-                update(working, result);
-                if (time_up)   break;          
+            if (RAVE != 0) {
+                while(1) {
+                    path.clear();
+                    node* working = select();
+                    working = expand(working);
+                    bool result = simulate(working);
+                    update(working, result);
+                    traverse(result, &root);
+                    if (time_up)   break;
+                }
+            }
+            else {
+                while(1) {
+                    node* working = select();
+                    working = expand(working);
+                    bool result = simulate(working);
+                    update(working, result);
+                    if (time_up)   break;
+                }                
             }
         }
         return root.best_action();
@@ -240,5 +291,7 @@ private:
     node root;
     int cycles;     // number of simulations
     int think_time; // thinking_time in milisecond;
-    bool tuned = true;
+    bool tuned = false;
+    double RAVE = 0;
+    std::vector<placement> path;
 };
