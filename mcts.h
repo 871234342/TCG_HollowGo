@@ -30,6 +30,25 @@ int space[] = {0, 1, 2, 3, 4, 5, 6, 7, 8,
 63, 64, 65, 66, 67, 68, 69, 70, 71,
 72, 73, 74, 75, 76, 77, 78, 79, 80};
 
+struct placement{
+    /**
+     * "who" places at "pos"
+     */
+    int pos;
+    board::piece_type who;
+
+    placement(int p, board::piece_type w) : pos(p), who(w) {}
+};
+
+struct sim_result{
+    bool shyoubu;
+    std::vector<placement> katei;
+
+    sim_result() {
+        katei.clear();
+    }
+};
+
 class node{
 public:
     node(board new_board, board::piece_type player_type){
@@ -116,21 +135,24 @@ public:
      * return true if win for root peice type
      * both player play randomly
      */ 
-    bool simulate(board::piece_type root_player) {
+    sim_result simulate(board::piece_type root_player) {
         board simulate = current;
         board::piece_type current_player = who;
         bool checkmate = true;
+        sim_result kekka;
         for (;;) {
             std::shuffle(&space[0], &space[81], engine);
             for (int pos : space) {
                 action::place move = action::place(pos, current_player);
                 if (move.apply(simulate) == board::legal) {
                     checkmate = false;
+                    kekka.katei.emplace_back(placement(pos, current_player));
                     break;
                 }
             }
             if (checkmate) {
-                return current_player != root_player;
+                kekka.shyoubu = (current_player != root_player);
+                return kekka;
             }
             else {
                 checkmate = true;
@@ -179,15 +201,6 @@ public:
     double Q = 0, Q_RAVE = 0, mean = 0;
 };
 
-struct placement{
-    /**
-     * "who" places at "pos"
-     */
-    int pos;
-    board::piece_type who;
-
-    placement(int p, board::piece_type w) : pos(p), who(w) {}
-};
 
 class mcts{
 public:
@@ -216,7 +229,7 @@ public:
         return to_sim;
     }
 
-    bool simulate(node* to_simulate) {
+    sim_result simulate(node* to_simulate) {
         return to_simulate->simulate(root.who);
     }
 
@@ -236,6 +249,11 @@ public:
                 start->RAVE_update(win);
             }
         }
+        for (placement move : mogi.katei) {
+            if (start->parent_move == move.pos && start->parent->who == move.who) {
+                start->RAVE_update(win);
+            }
+        }
     }
 
     action::place tree_search(bool debug = false) {
@@ -243,19 +261,20 @@ public:
             if (RAVE != 0) {
                 for (int i = 0; i < cycles; i++) {
                     path.clear();
+                    mogi.katei.clear();
                     node* working = select();
                     working = expand(working);
-                    bool result = simulate(working);
-                    update(working, result);
-                    traverse(result, &root);
+                    mogi = simulate(working);
+                    update(working, mogi.shyoubu);
+                    traverse(mogi.shyoubu, &root);
                 }
             }
             else {
                 for (int i = 0; i < cycles; i++) {
                     node* working = select();
                     working = expand(working);
-                    bool result = simulate(working);
-                    update(working, result);
+                    mogi = simulate(working);
+                    update(working, mogi.shyoubu);
                 }
             }
         }
@@ -268,9 +287,9 @@ public:
                     path.clear();
                     node* working = select();
                     working = expand(working);
-                    bool result = simulate(working);
-                    update(working, result);
-                    traverse(result, &root);
+                    mogi = simulate(working);
+                    update(working, mogi.shyoubu);
+                    traverse(mogi.shyoubu, &root);
                     if (time_up)   break;
                 }
             }
@@ -278,8 +297,8 @@ public:
                 while(1) {
                     node* working = select();
                     working = expand(working);
-                    bool result = simulate(working);
-                    update(working, result);
+                    mogi = simulate(working);
+                    update(working, mogi.shyoubu);
                     if (time_up)   break;
                 }                
             }
@@ -294,4 +313,5 @@ private:
     bool tuned = false;
     double RAVE = 0;
     std::vector<placement> path;
+    sim_result mogi;
 };
