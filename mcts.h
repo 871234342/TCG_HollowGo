@@ -65,16 +65,10 @@ public:
         }
     }
 
-    double UCB(bool tuned = false) {
-        if (tuned)  return Q + std::sqrt(std::log(parent->N) / N * std::min(0.25, mean - mean * mean));
-        else        return Q + std::sqrt(std::log(parent->N) / N) * 0.1;
-    }
-
     /**
      * return the child node with highest UCB, or itself if the node has unexplored child
      */
     node* select(board::piece_type root_type, double RAVE, bool tuned = false) {
-        //std::cout<<"Selection started!      ";
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
         double c = 0.7;
@@ -83,7 +77,7 @@ public:
             double value;
             if (root_type == who)   
                 value = (1 - RAVE) * child->Q + RAVE * child->Q_RAVE + std::sqrt(std::log(N) / child->N) * c;
-            else   
+            else
                 value = (1 - RAVE) * (1 - child->Q) + RAVE * (1 - child->Q_RAVE) + std::sqrt(std::log(N) / child->N) * c;
             if (value >= best_value) {
                 best_value = value;
@@ -165,7 +159,6 @@ public:
      * return the parent node to update
      */
     node* update(bool victory) {
-        mean = (mean * N + victory) / (N + 1);
         N++;
         Q += (victory - Q) / N;
         return parent;
@@ -198,7 +191,7 @@ public:
     std::vector<node*> children;
     bool terminated = false;
     int N = 0, N_RAVE = 0, parent_move = -1;
-    double Q = 0, Q_RAVE = 0, mean = 0;
+    double Q = 0, Q_RAVE = 0;
 };
 
 
