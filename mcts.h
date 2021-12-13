@@ -54,7 +54,7 @@ public:
         return N;
     }
 
-    action::place get_move() {
+    int get_move() {
         return parent_move;
     }
 
@@ -105,7 +105,7 @@ public:
                 if (move.apply(after) == board::legal) {
                     node* child = new node(after, child_type);
                     child->parent = this;
-                    child->parent_move = move;
+                    child->parent_move = pos;
                     children.push_back(child);
                 }
             }
@@ -161,7 +161,7 @@ public:
 
     action::place best_action() {
         int most_visit_count = 0;
-        action::place best_move;
+        int best_move = -1;
         for (node* child : children) {
             int visit_count = child->get_visit_count();
             if (visit_count >= most_visit_count) {
@@ -169,7 +169,7 @@ public:
                 best_move = child->get_move();
             } 
         }
-        return best_move;
+        return action::place(best_move, who);
     }
 
 private:
@@ -178,10 +178,9 @@ private:
     board::piece_type who;  //type to play next
     board::piece_type child_type;
     node* parent = NULL;
-    action::place parent_move;
     std::vector<node*> children;
     bool terminated = false;
-    int N = 0;
+    int N = 0, parent_move = -1;
     double Q = 0, mean = 0;
 };
 
