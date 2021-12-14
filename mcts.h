@@ -68,7 +68,7 @@ public:
     /**
      * return the child node with highest UCB, or itself if the node has unexplored child
      */
-    node* select(board::piece_type root_type, double RAVE, bool tuned = false) {
+    node* select(board::piece_type root_type, double RAVE) {
         if (num_of_child != explored_child || num_of_child == 0)     return this;
         double best_value = 0;
         double c = 0.7;
@@ -197,15 +197,15 @@ public:
 
 class mcts{
 public:
-    mcts(const board& root_board, board::piece_type player_type, int c, int t, bool tu = true, double r = 0) : 
-        root(root_board, player_type), cycles(c), think_time(t), tuned(tu), RAVE(r) {
+    mcts(const board& root_board, board::piece_type player_type, int c, int t, double r = 0) : 
+        root(root_board, player_type), cycles(c), think_time(t), RAVE(r) {
             path.clear();
         }
 
-    node* select(bool tuned = false) {
+    node* select() {
         node* selecting = &root;
         node* next;
-        while ((next = selecting->select(root.who, RAVE, tuned)) != selecting) {
+        while ((next = selecting->select(root.who, RAVE)) != selecting) {
             selecting = next;
             path.emplace_back(placement(selecting->parent_move, selecting->parent->who));
         }
@@ -303,7 +303,6 @@ private:
     node root;
     int cycles;     // number of simulations
     int think_time; // thinking_time in milisecond;
-    bool tuned = false;
     double RAVE = 0;
     std::vector<placement> path;
     sim_result mogi;

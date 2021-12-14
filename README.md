@@ -57,6 +57,7 @@ To launch the GTP shell with custom player arguments:
 ```
 
 To launch MCTS:
+This is default settings. Tweak the parameter below if you want to.
 ```bash
 ./nogo --black="search=MCTS time=900 RAVE=0.5"
 ```

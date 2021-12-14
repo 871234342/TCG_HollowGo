@@ -100,16 +100,15 @@ public:
 				else {
 					mcts_sim_count = 1000;
 				}
-				if (meta.find("tuned") != meta.end())	tuned = true;
 				if (meta.find("RAVE") != meta.end())
 					RAVE = atof(meta["RAVE"].value.c_str());
 			}
 			else if(meta["search"].value == "MORON") {
 				mode = MORON;
 			}
-		}
-		else {
-			mode = RNG;
+			else if(meta["search"].value == "RNG") {
+				mode = RNG;
+			}
 		}
 	}
 
@@ -118,7 +117,7 @@ public:
 		switch (mode) {
 			case MCTS:
 				{
-				mcts gameTree(state, who, mcts_sim_count, mcts_think_time, tuned, RAVE);
+				mcts gameTree(state, who, mcts_sim_count, mcts_think_time, RAVE);
 				return gameTree.tree_search();
 				break;
 				}
@@ -137,9 +136,8 @@ public:
 private:
 	std::vector<action::place> space;
 	board::piece_type who;
-	int mode;
+	int mode = MCTS;
 	int mcts_sim_count = 0;
-	int mcts_think_time;
-	bool tuned = false;
-	double RAVE = 0;
+	int mcts_think_time = 900;
+	double RAVE = 0.5;
 };
