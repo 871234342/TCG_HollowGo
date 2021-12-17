@@ -233,19 +233,20 @@ public:
     }
 
     void traverse(bool win, node* start) {
-        for (node* child : start->children) {
-            traverse(win, child);
-        }
-        // RAVE update
-        for (placement move : path) {
-            if (start->parent_move == move.pos && start->parent->who == move.who) {
-                start->RAVE_update(win);
+        while(start != NULL) {
+            for (node* child : start->children) {
+                for (placement move : path) {
+                    if (child->parent_move == move.pos && child->parent->who == move.who) {
+                        child->RAVE_update(win);
+                    }
+                }
+                for (placement move : mogi.katei) {
+                    if (child->parent_move == move.pos && child->parent->who == move.who) {
+                        child->RAVE_update(win);
+                    }
+                }
             }
-        }
-        for (placement move : mogi.katei) {
-            if (start->parent_move == move.pos && start->parent->who == move.who) {
-                start->RAVE_update(win);
-            }
+            start = start->parent;
         }
     }
 
@@ -259,7 +260,7 @@ public:
                     working = expand(working);
                     mogi = simulate(working);
                     update(working, mogi.shyoubu);
-                    traverse(mogi.shyoubu, &root);
+                    traverse(mogi.shyoubu, working);
                 }
             }
             else {
@@ -282,7 +283,7 @@ public:
                     working = expand(working);
                     mogi = simulate(working);
                     update(working, mogi.shyoubu);
-                    traverse(mogi.shyoubu, &root);
+                    traverse(mogi.shyoubu, working);
                     if (time_up)   break;
                 }
             }
